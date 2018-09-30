@@ -2,7 +2,7 @@
 <html lang="en">
     <style>
         body {
-            background: #ccc;
+            background: #000;
         }
     </style>
 	<body>
@@ -17,12 +17,11 @@
     </div>
     <script src="r73/three.js"></script>
     <script src="r73/OrbitControls.js"></script>
-    <script src="r73/Mirror.js"></script>
-    <script src="myCubeCamera.js"></script>
     <script src="files.js"></script>
     <script src="utils.js"></script>
     <script id="vs" type="x-shader/x-vertex">
         varying vec2 vUv; 
+        uniform float alpha;
         void main()
         {
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0 );
@@ -33,82 +32,93 @@
 
     <script id="fs" type="x-shader/x-fragment">
         uniform sampler2D iChannel0;
+        uniform sampler2D iChannel1;
+        uniform sampler2D iChannel2;
+        uniform sampler2D iChannel3;
         varying vec2 vUv;  
+        uniform float alpha;
         void main() {
             vec2 uv = vUv;
-            vec4 px0 = texture2D( iChannel0,  uv);
-            px0.a = 0.8;
+            vec4 pr;
 
-            gl_FragColor =  px0;
+            // see: https://en.wikipedia.org/wiki/Alpha_compositing#Description
+
+            vec4 p0 = texture2D( iChannel0,  uv);
+            pr = p0;
+
+            vec4 p1 = texture2D( iChannel1,  uv);
+            pr = p1*alpha + pr * (1.0 - alpha);
+
+            vec4 p2 = texture2D( iChannel2,  uv);
+            pr = p2*alpha + pr * (1.0 - alpha);
+
+            vec4 p3 = texture2D( iChannel3,  uv);
+            pr = p3*alpha + pr * (1.0 - alpha);
+
+            gl_FragColor =  pr;
+            pr.a = 1.0;            
         }
 
     </script>
         <script>
 
-    var _container, render_stats, physics_stats;
-    var _camera, _controls, _scene, _renderer;
-    var _boxPivotPoint, textElement, _shaderMaterial;
-    _textElement = document.getElementById('text1');
-    _textElement2 = document.getElementById('text2');
-    var _scene = new THREE.Scene();
+        var _container;
+        var _camera, _controls, _scene, _renderer;
+        var _boxPivotPoint, textElement, _shaderMaterial;
+        var _scene;
+        var _planes;
+        _textElement = document.getElementById('text1');
+        _textElement2 = document.getElementById('text2');
+    function init() {
+         _scene = new THREE.Scene();
 
-    _container = document.getElementById( 'container' );
+        _container = document.getElementById( 'container' );
 
-    _renderer =  new THREE.WebGLRenderer({antialias: true, alpha: true});
-    _renderer.setSize( window.innerWidth, window.innerHeight );
-    document.getElementById( 'container' ).innerHTML = "";
-    _container.appendChild( _renderer.domElement );
+        _renderer =  new THREE.WebGLRenderer({antialias: true, alpha: true});
+        // _renderer.setSize( window.innerWidth, window.innerHeight );
+        document.getElementById( 'container' ).innerHTML = "";
+        _container.appendChild( _renderer.domElement );
+        _camera = new THREE.PerspectiveCamera( 60, 1./1., 1, 20000 );
 
-    _camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 20000 );
-    _camera.position.x = 0; _camera.position.y = 20; _camera.position.z = 109;
+        _camera.position.x = 0; _camera.position.y = 0; _camera.position.z = 150;
 
-    _controls = new THREE.OrbitControls( _camera, _container.domElement );
-
-    var material = new THREE.ShaderMaterial( {
-        uniforms: {
-            iChannel0:  { type: 't', value: 0 },
-            iChannel1:  { type: 't', value: 0 },
-        },
-        vertexShader: document.getElementById( 'vs' ).textContent,
-        fragmentShader: document.getElementById( 'fs' ).textContent,
-        transparent: true, opacity: .5
-    } );
-    // var material = new THREE.MeshNormalMaterial();
-    var pathToTexture = "P1040951";
-    texture = THREE.ImageUtils.loadTexture("textures/" + pathToTexture + ".JPG");
-    material.uniforms.iChannel0 =  { type: 't', value: texture }; 
-
-    var plane = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), material);
-    plane.material.side = THREE.DoubleSide;
-    plane.position.z = -1;
-    plane.rotation.y = Math.PI ;
-    plane.rotation.z = Math.PI ;
-    _scene.add(plane);
-
-    var material = new THREE.ShaderMaterial( {
-        uniforms: {
-            iChannel0:  { type: 't', value: 0 },
-            iChannel1:  { type: 't', value: 0 },
-        },
-        vertexShader: document.getElementById( 'vs' ).textContent,
-        fragmentShader: document.getElementById( 'fs' ).textContent,
-        transparent: true, opacity: .5
-    } );
-    var pathToTexture = "P1040952";
-    texture = THREE.ImageUtils.loadTexture("textures/" + pathToTexture + ".JPG");
-    material.uniforms.iChannel0 =  { type: 't', value: texture }; 
-    var plane = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), material);
-    plane.material.side = THREE.DoubleSide;
-
-    plane.rotation.y = Math.PI ;
-    plane.rotation.z = Math.PI ;
-    _scene.add(plane);
-    // loadSkyDome(_scene, 'textures.old/louis.jpg');
-
-    var clock = new THREE.Clock();
-    _renderer.render( _scene, _camera );
-    requestAnimationFrame( render );
-
+        _controls = new THREE.OrbitControls( _camera, _container.domElement );
+        shuffleBoneList();
+        textureLoader(callback);
+        // loadSkyDome(_scene, "textures/P1040951.JPG")
+    }
+    function callback() {
+        count = 0;
+                var mat = new THREE.ShaderMaterial( {
+                    uniforms: {
+                        iChannel0:  { type: 't', value: 0 },
+                        iChannel1:  { type: 't', value: 0 },
+                        iChannel2:  { type: 't', value: 0 },
+                        iChannel3:  { type: 't', value: 0 },
+                        alpha: {type: 'f', value: 0.6 }
+                    },
+                    vertexShader: document.getElementById( 'vs' ).textContent,
+                    fragmentShader: document.getElementById( 'fs' ).textContent,
+                    transparent: true, opacity: 0.0
+                } );
+                mat.uniforms.iChannel0 =  { type: 't', value: _textures[count++] };
+                mat.uniforms.iChannel1 =  { type: 't', value: _textures[count++] };
+                mat.uniforms.iChannel2 =  { type: 't', value: _textures[count++] };
+                mat.uniforms.iChannel3 =  { type: 't', value: _textures[count++] };
+                var plane = new THREE.Mesh(new THREE.PlaneGeometry(161, 100), mat);
+                plane.material.side = THREE.DoubleSide;
+                plane.position.z = 0;
+                plane.position.y = 0;
+                // plane.rotation.x = Math.PI ;
+                // plane.rotation.y = Math.PI ;
+                // plane.rotation.z = Math.PI ;
+                _scene.add(plane);       
+        var axesHelper = new THREE.AxisHelper( 50 );
+        // _scene.add( axesHelper );
+        var clock = new THREE.Clock();
+        _renderer.render( _scene, _camera );
+        requestAnimationFrame( render );
+    }
     function render() {
         requestAnimationFrame( render );
         // _controls.update( clock.getDelta() );
@@ -121,6 +131,35 @@
         // _cubeCamera.updateCubeMap(_renderer, _scene);        
         // cube.visible = true;
     }
+
+    function resize() {
+        console.log("Resizing.......");
+
+        var w = window.innerWidth*.98;
+        var h = window.innerHeight*.98;
+        var ar = w/h;
+        var magicNumber = 1.01;
+        if (ar <magicNumber) {
+            h = w/magicNumber
+        }
+        else {
+            w = h*magicNumber
+        }
+
+        // if (w < h * 1.61) {
+        //     w = h * 1.61;
+        // }
+        // else {
+        //     h = w/1.61;
+        // }
+        _renderer.setSize( w, h );
+        // _camera = new THREE.PerspectiveCamera( 60, 1.0/1.61, 1, 20000 );
+    }
+
+
+    init();
+    window.addEventListener('resize', function () {resize();}, false);
+    resize();
 </script>
 	</body>
 </html>

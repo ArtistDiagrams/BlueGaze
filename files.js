@@ -32,32 +32,35 @@ function randomBoneList() {
 var _textureIndex = 0;
 var _randomList;
 var _materials;
-var _textureLoader;
-function textureLoader() {
-     _textureLoader = new THREE.TextureLoader();
+var _textureLoader = new THREE.TextureLoader();
+var _textures;
+function shuffleBoneList() {
     randomBoneList();
     _randomList = _boneFiles;
     _textureIndex = 0;
     _materials = [];
-    recurse();
+    _textures = [];
 }
-function recurse() {
-    console.log("Loading " + _randomList[_textureIndex]);
+function textureLoader(callme) {
+    recurse(callme);
+}
+function recurse(callme) {
+    console.log("Loading " + _textureIndex + ", " + _randomList[_textureIndex]);
     _textureLoader.load("textures/" + _randomList[_textureIndex],
         function ( texture ) {
-             console.log("Loaded.")
-            _materials[_textureIndex++] = new THREE.MeshBasicMaterial( {
+            _textures[_textureIndex] = texture;
+            //  console.log("Loaded.")
+            _materials[_textureIndex] = new THREE.MeshBasicMaterial( {
                 map: texture
              });
-             if (_textureIndex < _randomList.length)
-                recurse();
+             if (_textureIndex < _randomList.length-1) {
+                _textureIndex++;
+                recurse(callme);
+             }
+            else
+                callme();
         },
         undefined,
-        function ( err ) {
-            console.error( 'An error happened.' );
-        }
+        function ( err ) {console.error( 'An error happened.' ); }
     );    
-}
-function makeMaterial(texture) {
-    
 }
