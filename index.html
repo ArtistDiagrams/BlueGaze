@@ -1,15 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html style='width: 100%; height: 100%;'>
     <style>
         body {
             background: #000;
         }
         html, body{ 
-            min-height: 97vh;
             overflow: auto;
         }
+        #container { 
+            /* min-height: 80vh; */
+            overflow: auto;
+        }
+        .center-div {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        canvas
+        {
+            /* display: inline;
+            float: none; */
+        }
     </style>
-	<body>
+    <body style='width: 98%; height: 97%;' >
+        <div id="container" style='width: 100%; height: 100%;' class="center-div" onClick="refreshPage()"></div>
     <script src="r73/three.js"></script>
     <script src="r73/OrbitControls.js"></script>
     <script src="files.js"></script>
@@ -56,12 +70,17 @@
     </script>
     <script>
 
-        var _container;
+        var _container, _body;
         var _camera, _scene, _renderer;
         var  _shaderMaterial;
         var _scene;
         var _planes;
         var xValue = window.innerWidth, yValue=window.innerHeight;
+        _body = document.getElementsByTagName( 'body' )[0];
+        _container = document.getElementById( 'container' );
+        _renderer =  new THREE.WebGLRenderer({antialias: true, alpha: true});
+        _container.innerHTML = "";
+        _container.appendChild( _renderer.domElement );
         var _mat = new THREE.ShaderMaterial( {
                 uniforms: {
                     iChannel0:  { type: 't', value: 0 },
@@ -78,11 +97,7 @@
         function init() {
             _scene = new THREE.Scene();
 
-            _container = document.getElementsByTagName( 'body' )[0];
             console.log("body", _container.clientWidth, _container.clientHeight);
-            _renderer =  new THREE.WebGLRenderer({antialias: true, alpha: true});
-            _container.innerHTML = "";
-            _container.appendChild( _renderer.domElement );
             _camera = new THREE.PerspectiveCamera( 60, xValue/yValue, 1, 20000 );
             shuffleBoneList();
             textureLoader(callback);
@@ -109,37 +124,41 @@
 
         function resize() {
             console.log("Resizing.......");
-            xValue = _container.clientWidth;
-            yValue= _container.clientHeight;
+            xValue = _body.clientWidth*.99;
+            yValue= _body.clientHeight*.99;
 
-            console.log("window", xValue, yValue);
+            // alert(xValue + "," + yValue);
 
-            _mat.uniforms.resolution.value.x = xValue;
-            _mat.uniforms.resolution.value.y = yValue;
+            // _renderer.setSize( xValue, yValue);
 
-            _renderer.setSize( xValue, yValue);
-            console.log("pixelRatio", window.devicePixelRatio);
-            console.log("container", _container.clientWidth, _container.clientHeight);
             // _camera.aspect = xValue/yValue;
 
-            // var w = window.innerWidth*.98;
-            // var h = window.innerHeight*.98;
-            // var ar = w/h;
-            // var magicNumber = 1.01;
-            // if (ar <magicNumber) {
-            //     h = w/magicNumber
-            // }
-            // else {
-            //     w = h*magicNumber
-            // }
-
-            // _renderer.setSize( w, h );
+            var w = xValue;
+            var h = yValue;
+            var ar = w/h;
+            var magicNumber = 21/13;
+            if (ar < magicNumber) {
+                h = w/magicNumber
+            }
+            else {
+                w = h*magicNumber
+            }
+            console.log("window", xValue, yValue);
+            console.log("wxh", w, h, w/h, ar);
+            _renderer.setSize( w, h );
+            console.log("container", _container.clientWidth, _container.clientHeight);
+            _mat.uniforms.resolution.value.x = w;
+            _mat.uniforms.resolution.value.y = h;
+            // canvas = document.getElementsByTagName( 'canvas' )[0];
+            // canvas.class="center-div"
         }
-
-
+        function refreshPage(){
+            window.location.reload();
+        } 
+        window.onresize = resize;
+        window.addEventListener('orientationchange', function (e) { setTimeout(resize, 250); });
         init();
-        window.addEventListener('resize', function () {resize();}, false);
-        resize();
+        setTimeout(resize, 500);
     </script>
 	</body>
 </html>
