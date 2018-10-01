@@ -53,7 +53,7 @@ function recurse(callme) {
             _materials[_textureIndex] = new THREE.MeshBasicMaterial( {
                 map: texture
              });
-             if (_textureIndex < _randomList.length-1) {
+             if (_textureIndex < 4) {
                 _textureIndex++;
                 recurse(callme);
              }
